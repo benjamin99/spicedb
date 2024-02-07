@@ -877,7 +877,7 @@ func (m *DecodedCaveat_Cel) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 		} else {
-			encoded, err := proto.Marshal(m.Cel)
+			encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(m.Cel)
 			if err != nil {
 				return 0, err
 			}
