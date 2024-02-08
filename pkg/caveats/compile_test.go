@@ -215,7 +215,7 @@ func TestDeserializeEmpty(t *testing.T) {
 }
 
 func TestSerialization(t *testing.T) {
-	exprs := []string{"a == 1", "a + b == 2", "b - a == 4", "l.all(i, i > 42)"}
+	exprs := []string{"a == 1", "a + b == 2", "b - a == 4", "l.all(i, i > 42)", "a == b"}
 
 	for _, expr := range exprs {
 		expr := expr
@@ -239,6 +239,12 @@ func TestSerialization(t *testing.T) {
 			astExpr, err := deserialized.ExprString()
 			require.NoError(t, err)
 			require.Equal(t, expr, astExpr)
+
+			// to ensure the serialization is deterministic
+			serialized2, err := deserialized.Serialize()
+			require.NoError(t, err)
+
+			require.Equal(t, serialized, serialized2)
 		})
 	}
 }
