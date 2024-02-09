@@ -50,17 +50,19 @@ func TestCaveatDiff(t *testing.T) {
 			"no changes",
 			ns.MustCaveatDefinition(
 				caveats.MustEnvForVariables(map[string]types.VariableType{
-					"someparam": types.IntType,
+					"someparamfoo": types.StringType,
+					"someparambar": types.StringType,
 				}),
 				"somecaveat",
-				"true",
+				"someparamfoo == someparambar",
 			),
 			ns.MustCaveatDefinition(
 				caveats.MustEnvForVariables(map[string]types.VariableType{
-					"someparam": types.IntType,
+					"someparamfoo": types.StringType,
+					"someparambar": types.StringType,
 				}),
 				"somecaveat",
-				"true",
+				"someparamfoo == someparambar",
 			),
 			[]Delta{},
 		},
