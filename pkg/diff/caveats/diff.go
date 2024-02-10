@@ -2,9 +2,12 @@ package caveats
 
 import (
 	"bytes"
+	"reflect"
 
+	impl "github.com/authzed/spicedb/pkg/proto/impl/v1"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 
 	"github.com/authzed/spicedb/pkg/caveats/types"
 	"github.com/authzed/spicedb/pkg/genutil/mapz"
@@ -67,6 +70,26 @@ type Delta struct {
 	CurrentType *core.CaveatTypeReference
 }
 
+func reloadExpr(caveat *core.CaveatDefinition) (*expr.CheckedExpr, error) {
+	var cc impl.DecodedCaveat
+	if err := cc.UnmarshalVT(caveat.SerializedExpression); err != nil {
+		return nil, err
+	}
+	return cc.GetCel(), nil
+}
+
+func compareExpr(existing *core.CaveatDefinition, updated *core.CaveatDefinition) (bool, error) {
+	existingExpr, err := reloadExpr(existing)
+	if err != nil {
+		return false, err
+	}
+	updatedExpr, err := reloadExpr(updated)
+	if err != nil {
+		return false, err
+	}
+	return reflect.DeepEqual(existingExpr, updatedExpr), nil
+}
+
 // DiffCaveats performs a diff between two caveat definitions. One or both of the definitions
 // can be `nil`, which will be treated as an add/remove as applicable.
 func DiffCaveats(existing *core.CaveatDefinition, updated *core.CaveatDefinition) (*Diff, error) {
@@ -101,7 +124,7 @@ func DiffCaveats(existing *core.CaveatDefinition, updated *core.CaveatDefinition
 
 	deltas := make([]Delta, 0, len(existing.ParameterTypes)+len(updated.ParameterTypes))
 
-	// Check the caveats's comments.
+	// Check the caveats' comments.
 	existingComments := nspkg.GetComments(existing.Metadata)
 	updatedComments := nspkg.GetComments(updated.Metadata)
 	if !slices.Equal(existingComments, updatedComments) {
@@ -153,9 +176,12 @@ func DiffCaveats(existing *core.CaveatDefinition, updated *core.CaveatDefinition
 	}
 
 	if !bytes.Equal(existing.SerializedExpression, updated.SerializedExpression) {
-		deltas = append(deltas, Delta{
-			Type: CaveatExpressionMayHaveChanged,
-		})
+		equal, err := compareExpr(existing, updated)
+		if err != nil {
+			return nil, err
+		} else if !equal {
+			deltas = append(deltas, Delta{Type: CaveatExpressionMayHaveChanged})
+		}
 	}
 
 	return &Diff{
